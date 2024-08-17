@@ -1,0 +1,19 @@
+{
+  "name": "brightside-cli",
+  "version": "0.0.8",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "brightside": "index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "minimist": "^1.2.5"
+  }
+}
