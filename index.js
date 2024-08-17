@@ -4,11 +4,13 @@ const { program } = require('commander')
 const fs = require('fs')
 const path = require('path')
 const { exec } = require('child_process')
+const inquirer = require('inquirer')
 
 program
   .command('gen-brightbase')
   .description('Generate types and instantiate tables for BrightBase')
   .action(() => {
+    // Existing 'gen-brightbase' command logic
     const dbTypesFilePath = path.join(process.cwd(), 'src/types', 'database.types.ts')
     const brightTypesFilePath = path.join(process.cwd(), 'src/types', 'bright.types.ts')
     const outputFilePath = path.join(process.cwd(), 'src/api', 'Tables.ts')
@@ -24,20 +26,15 @@ program
       }
     )
 
-    // Read the generated database.types.ts file
     fs.readFile(dbTypesFilePath, 'utf8', (err, data) => {
       if (err) {
         console.error('Error reading types file:', err)
         process.exit(1)
       }
 
-      // Extract table names
       const tableNames = extractTableDetails(data)
-
-      // Generate the content for the Tables.ts file
       const fileContent = generateTablesContent(tableNames)
 
-      // Write the content to Tables.ts
       fs.writeFile(outputFilePath, fileContent, (err) => {
         if (err) {
           console.error('Error writing file:', err)
@@ -50,13 +47,15 @@ program
 
 program
   .command('create-brightside-app <name>')
-  .description('This will eventually create a new Brightside app')
+  .description('Create a new Brightside app')
   .action((name) => {
-    const command = `echo "Testing out passing args, you passed: ${name}"`
+    const repoUrl = 'https://github.com/brightsidedeveloper/create-brightside-app.git'
+    const cloneCommand = `git clone ${repoUrl} ${name}`
 
-    exec(command, { shell: true }, (error, stdout, stderr) => {
+    console.log(`Cloning the repository into ${name}...`)
+    exec(cloneCommand, { shell: true }, (error, stdout, stderr) => {
       if (error) {
-        console.error(`Error executing command: ${error.message}`)
+        console.error(`Error cloning repository: ${error.message}`)
         return
       }
 
@@ -66,10 +65,71 @@ program
       }
 
       console.log(`stdout: ${stdout}`)
+      console.log('Repository cloned successfully!')
+
+      inquirer
+        .prompt([
+          { name: 'supabaseRefId', message: 'Enter your Supabase Reference ID:' },
+          { name: 'supabaseUrl', message: 'Enter your Supabase URL:' },
+          { name: 'supabaseAnonKey', message: 'Enter your Supabase Anon Key:' },
+        ])
+        .then((answers) => {
+          // Update package.json
+          const packageJsonPath = path.join(process.cwd(), name, 'package.json')
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+          packageJson.name = name
+          packageJson.scripts.gen = packageJson.scripts.gen.replace('$SUPABASE_REFERENCE_ID', answers.supabaseRefId)
+
+          fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
+          console.log('Updated package.json')
+
+          // Create .env file
+          const envContent = `VITE_SUPABASE_URL=${answers.supabaseUrl}\nVITE_SUPABASE_ANON_KEY=${answers.supabaseAnonKey}\n`
+          const envFilePath = path.join(process.cwd(), name, '.env')
+          fs.writeFileSync(envFilePath, envContent)
+          console.log('Created .env file')
+
+          // Install dependencies and start the dev server
+          console.log('Installing dependencies...')
+          exec(`cd ${name} && npm install`, { shell: true }, (error, stdout, stderr) => {
+            if (error) {
+              console.error(`Error installing dependencies: ${error.message}`)
+              return
+            }
+
+            if (stderr) {
+              console.error(`stderr: ${stderr}`)
+              return
+            }
+
+            console.log(`stdout: ${stdout}`)
+            console.log('Dependencies installed successfully!')
+
+            console.log('Starting the development server...')
+            exec(`cd ${name} && npm run dev`, { shell: true }, (error, stdout, stderr) => {
+              if (error) {
+                console.error(`Error starting development server: ${error.message}`)
+                return
+              }
+
+              if (stderr) {
+                console.error(`stderr: ${stderr}`)
+                return
+              }
+
+              console.log(`stdout: ${stdout}`)
+              console.log('Development server started!')
+            })
+          })
+        })
     })
   })
 
 program.parse(process.argv)
+
+/* Helper Functions */
+
+// Add your existing helper functions here...
 
 /**
  * Extracts the table names and their corresponding Row types from the database.types.ts file content.
