@@ -1,6 +1,6 @@
 {
   "name": "brightside-cli",
-  "version": "0.0.23",
+  "version": "0.0.26",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

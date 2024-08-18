@@ -163,9 +163,22 @@ function extractTableDetails(data) {
  */
 function generateTablesContent(tableDetails) {
   const imports = `import { BrightBaseCRUD } from 'brightside-developer'\nimport { BrightTable } from '../types/bright.types'\n\n`
+
   const typeDefinitions = tableDetails
     .map(({ tableName, typeName }) => {
-      return `export type ${typeName} = BrightTable<'${tableName}'>\nexport interface ${typeName}CreateOptions {\n  OmitOnCreate: 'id' | 'created_at'\n  OptionalOnCreate: never\n}\nexport type ${typeName}ReadOptions = Parameters<typeof Tables.${tableName}.read>\n`
+      return `
+export type ${typeName} = BrightTable<'${tableName}'>
+export interface ${typeName}CreateOptions {
+  OmitOnCreate: 'id' | 'created_at' // Add or Remove fields that are omitted on create
+  OptionalOnCreate: never // Add fields that are optional on create
+}
+export type ${typeName}ReadOptions = Parameters<typeof Tables.${tableName}.read>
+
+export type ${typeName}InfiniteReadOptions = [
+  Parameters<typeof Tables.${tableName}.read>[0],
+  Omit<Parameters<typeof Tables.${tableName}.read>[1], 'limit' | 'offset'>,
+]
+      `
     })
     .join('\n')
 
