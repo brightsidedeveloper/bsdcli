@@ -4,13 +4,21 @@ const { program } = require('commander')
 const fs = require('fs')
 const path = require('path')
 const { exec } = require('child_process')
-const inquirer = require('inquirer')
+const prompts = require('prompts')
+const signale = require('signale')
+
+// Custom logger for a cool banner
+function displayBanner() {
+  signale.star('Welcome to BrightSide!')
+  signale.info("Let's create something amazing! 🚀")
+}
 
 program
   .command('gen-brightbase')
   .description('Generate types and instantiate tables for BrightBase')
   .action(() => {
-    // Existing 'gen-brightbase' command logic
+    displayBanner()
+
     const dbTypesFilePath = path.join(process.cwd(), 'src/types', 'database.types.ts')
     const brightTypesFilePath = path.join(process.cwd(), 'src/types', 'bright.types.ts')
     const outputFilePath = path.join(process.cwd(), 'src/api', 'Tables.ts')
@@ -20,7 +28,7 @@ program
       `export type { Tables as BrightTable } from './database.types.ts'\n\nexport interface RealtimeEvents {\n  [event: string]: unknown\n}\n\nexport type EventCallback<K extends RealtimeEvents, T extends keyof K> = (payload: K[T]) => void`,
       (err) => {
         if (err) {
-          console.error('Error writing file:', err)
+          signale.error('Error writing file:', err)
           process.exit(1)
         }
       }
@@ -28,7 +36,7 @@ program
 
     fs.readFile(dbTypesFilePath, 'utf8', (err, data) => {
       if (err) {
-        console.error('Error reading types file:', err)
+        signale.error('Error reading types file:', err)
         process.exit(1)
       }
 
@@ -37,10 +45,10 @@ program
 
       fs.writeFile(outputFilePath, fileContent, (err) => {
         if (err) {
-          console.error('Error writing file:', err)
+          signale.error('Error writing file:', err)
           process.exit(1)
         }
-        console.log('Tables successfully generated!')
+        signale.success('Tables successfully generated!')
       })
     })
   })
@@ -48,88 +56,86 @@ program
 program
   .command('create-brightside-app <name>')
   .description('Create a new Brightside app')
-  .action((name) => {
-    const repoUrl = 'https://github.com/brightsidedeveloper/create-brightside-app.git'
-    const cloneCommand = `git clone ${repoUrl} ${name}`
+  .action(async (name) => {
+    displayBanner()
 
-    console.log(`Cloning the repository into ${name}...`)
+    const currentDir = process.cwd()
+    let targetDir = currentDir
+
+    // If the name is not '.', then create or use a new directory with that name
+    if (name !== '.') {
+      targetDir = path.join(currentDir, name)
+      if (fs.existsSync(targetDir)) {
+        signale.error(`Error: Directory '${name}' already exists. Please choose a different name or remove the existing directory.`)
+        process.exit(1)
+      } else {
+        fs.mkdirSync(targetDir)
+      }
+    } else if (fs.readdirSync(currentDir).length !== 0) {
+      signale.error(`Error: The current directory is not empty. Please specify a different project name or use an empty directory.`)
+      process.exit(1)
+    }
+
+    const answers = await prompts([
+      { type: 'text', name: 'supabaseRefId', message: 'Enter your Supabase Reference ID:' },
+      { type: 'text', name: 'supabaseUrl', message: 'Enter your Supabase URL:' },
+      { type: 'text', name: 'supabaseAnonKey', message: 'Enter your Supabase Anon Key:' },
+    ])
+
+    const repoUrl = 'https://github.com/brightsidedeveloper/create-brightside-app.git'
+    const cloneCommand = `git clone ${repoUrl} ${targetDir}`
+
+    signale.pending(`What's up, ${name === '.' ? 'in the current directory' : name}! Let's create your new Brightside app! 🚀`)
     exec(cloneCommand, { shell: true }, (error, stdout, stderr) => {
       if (error) {
-        console.error(`Error cloning repository: ${error.message}`)
+        signale.error(`Error cloning repository: ${error.message}`)
         return
       }
 
-      if (stderr) {
-        console.error(`stderr: ${stderr}`)
-        return
-      }
+      signale.success('Repository cloned successfully!')
 
-      console.log(`stdout: ${stdout}`)
-      console.log('Repository cloned successfully!')
+      // Update package.json
+      const packageJsonPath = path.join(targetDir, 'package.json')
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+      packageJson.name = name === '.' ? path.basename(currentDir) : name
+      packageJson.scripts.gen = packageJson.scripts.gen.replace('$SUPABASE_REFERENCE_ID', answers.supabaseRefId.trim())
 
-      inquirer
-        .prompt([
-          { name: 'supabaseRefId', message: 'Enter your Supabase Reference ID:' },
-          { name: 'supabaseUrl', message: 'Enter your Supabase URL:' },
-          { name: 'supabaseAnonKey', message: 'Enter your Supabase Anon Key:' },
-        ])
-        .then((answers) => {
-          // Update package.json
-          const packageJsonPath = path.join(process.cwd(), name, 'package.json')
-          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-          packageJson.name = name
-          packageJson.scripts.gen = packageJson.scripts.gen.replace('$SUPABASE_REFERENCE_ID', answers.supabaseRefId)
+      fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
+      signale.success('Updated package.json')
 
-          fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
-          console.log('Updated package.json')
+      // Create .env file
+      const envContent = `VITE_SUPABASE_URL=${answers.supabaseUrl.trim()}\nVITE_SUPABASE_ANON_KEY=${answers.supabaseAnonKey.trim()}\n`
+      const envFilePath = path.join(targetDir, '.env')
+      fs.writeFileSync(envFilePath, envContent)
+      signale.success('Created .env file')
 
-          // Create .env file
-          const envContent = `VITE_SUPABASE_URL=${answers.supabaseUrl}\nVITE_SUPABASE_ANON_KEY=${answers.supabaseAnonKey}\n`
-          const envFilePath = path.join(process.cwd(), name, '.env')
-          fs.writeFileSync(envFilePath, envContent)
-          console.log('Created .env file')
+      // Install dependencies and start the dev server
+      signale.start('Installing dependencies...')
+      exec(`cd ${targetDir} && npm install`, { shell: true }, (error, stdout, stderr) => {
+        if (error) {
+          signale.error(`Error installing dependencies: ${error.message}`)
+          return
+        }
 
-          // Install dependencies and start the dev server
-          console.log('Installing dependencies...')
-          exec(`cd ${name} && npm install`, { shell: true }, (error, stdout, stderr) => {
-            if (error) {
-              console.error(`Error installing dependencies: ${error.message}`)
-              return
-            }
+        signale.success('Dependencies installed successfully!')
 
-            if (stderr) {
-              console.error(`stderr: ${stderr}`)
-              return
-            }
+        signale.start('Generating with Supabase...')
+        exec(`cd ${targetDir} && npm run gen`, { shell: true }, (error, stdout, stderr) => {
+          if (error) {
+            signale.error(`Error starting development server: ${error.message}`)
+            return
+          }
 
-            console.log(`stdout: ${stdout}`)
-            console.log('Dependencies installed successfully!')
-
-            console.log('Starting the development server...')
-            exec(`cd ${name} && npm run dev`, { shell: true }, (error, stdout, stderr) => {
-              if (error) {
-                console.error(`Error starting development server: ${error.message}`)
-                return
-              }
-
-              if (stderr) {
-                console.error(`stderr: ${stderr}`)
-                return
-              }
-
-              console.log(`stdout: ${stdout}`)
-              console.log('Development server started!')
-            })
-          })
+          signale.success('Done! Run "npm run dev" to start the development server.')
+          exec(`code ${targetDir}`, { shell: true })
         })
+      })
     })
   })
 
 program.parse(process.argv)
 
 /* Helper Functions */
-
-// Add your existing helper functions here...
 
 /**
  * Extracts the table names and their corresponding Row types from the database.types.ts file content.
@@ -169,7 +175,7 @@ function generateTablesContent(tableDetails) {
     })
     .join(',\n  ')}\n}\n`
 
-  return `${imports}${typeDefinitions}\n${tablesObject}\nexport default Tables\n`
+  return `${imports}\n${tablesObject}\n${typeDefinitions}\nexport default Tables\n`
 }
 
 /**
