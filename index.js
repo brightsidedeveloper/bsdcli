@@ -6,7 +6,6 @@ const path = require('path')
 const { exec } = require('child_process')
 const prompts = require('prompts')
 const signale = require('signale')
-const { sign } = require('crypto')
 
 // Custom logger for a cool banner
 function displayBanner() {
@@ -93,53 +92,48 @@ program
         return
       }
 
-      signale.success('Repository cloned successfully!')
-
+      // Remove the .git directory
       signale.start('Setting up your project...')
       const gitDir = path.join(targetDir, '.git')
-      exec(`rm -rf ${gitDir}`, { shell: true }, (err) => {
-        if (err) {
-          signale.error(`Error removing .git directory: ${err.message}`)
+      fs.rmSync(gitDir, { recursive: true })
+      signale.success('Cleaned up the repository')
+
+      signale.start('Customizing your project...')
+
+      // Update package.json
+      const packageJsonPath = path.join(targetDir, 'package.json')
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
+      packageJson.name = name === '.' ? path.basename(currentDir) : name
+      packageJson.scripts.gen = packageJson.scripts.gen.replace('$SUPABASE_REFERENCE_ID', answers.supabaseRefId.trim())
+
+      fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
+      signale.success('Updated package.json')
+
+      // Create .env file
+      const envContent = `VITE_SUPABASE_URL=${answers.supabaseUrl.trim()}\nVITE_SUPABASE_ANON_KEY=${answers.supabaseAnonKey.trim()}\n`
+      const envFilePath = path.join(targetDir, '.env')
+      fs.writeFileSync(envFilePath, envContent)
+      signale.success('Created .env file')
+
+      // Install dependencies and start the dev server
+      signale.start('Installing dependencies...')
+      exec(`cd ${targetDir} && npm install`, { shell: true }, (error, stdout, stderr) => {
+        if (error) {
+          signale.error(`Error installing dependencies: ${error.message}`)
           return
         }
-        signale.success('Cleaned up the repository')
 
-        signale.start('Customizing your project...')
-        // Update package.json
-        const packageJsonPath = path.join(targetDir, 'package.json')
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
-        packageJson.name = name === '.' ? path.basename(currentDir) : name
-        packageJson.scripts.gen = packageJson.scripts.gen.replace('$SUPABASE_REFERENCE_ID', answers.supabaseRefId.trim())
+        signale.success('Dependencies installed successfully!')
 
-        fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2))
-        signale.success('Updated package.json')
-
-        // Create .env file
-        const envContent = `VITE_SUPABASE_URL=${answers.supabaseUrl.trim()}\nVITE_SUPABASE_ANON_KEY=${answers.supabaseAnonKey.trim()}\n`
-        const envFilePath = path.join(targetDir, '.env')
-        fs.writeFileSync(envFilePath, envContent)
-        signale.success('Created .env file')
-
-        // Install dependencies and start the dev server
-        signale.start('Installing dependencies...')
-        exec(`cd ${targetDir} && npm install`, { shell: true }, (error, stdout, stderr) => {
+        signale.start('Generating with Supabase...')
+        exec(`cd ${targetDir} && npm run gen`, { shell: true }, (error, stdout, stderr) => {
           if (error) {
-            signale.error(`Error installing dependencies: ${error.message}`)
+            signale.error(`Error starting development server: ${error.message}`)
             return
           }
 
-          signale.success('Dependencies installed successfully!')
-
-          signale.start('Generating Tables & Types with Supabase...')
-          exec(`cd ${targetDir} && npm run gen`, { shell: true }, (error, stdout, stderr) => {
-            if (error) {
-              signale.error(`Error starting development server: ${error.message}`)
-              return
-            }
-
-            signale.success('Done! Run "npm run dev" to start the development server.')
-            exec(`code ${targetDir}`, { shell: true })
-          })
+          signale.success('Done! Run "npm run dev" to start the development server.')
+          exec(`code ${targetDir}`, { shell: true })
         })
       })
     })
