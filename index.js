@@ -25,7 +25,7 @@ program
 
     fs.writeFile(
       brightTypesFilePath,
-      `export type { Tables as BrightTable } from './database.types.ts'\n\nexport interface RealtimeEvents {\n  [event: string]: unknown\n}\n\nexport type EventCallback<K extends RealtimeEvents, T extends keyof K> = (payload: K[T]) => void`,
+      `export type { Tables as BrightTable } from './database.types.ts'\n\nexport interface RealtimeEvents {\n  [event: string]: { [key: string]: unknown }\n}\n\nexport type EventCallback<K extends RealtimeEvents, T extends keyof K> = (payload: K[T]) => void`,
       (err) => {
         if (err) {
           signale.error('Error writing file:', err)
