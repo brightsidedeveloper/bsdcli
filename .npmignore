@@ -1,0 +1,6 @@
+src/
+*.ts
+*.tsx
+*.json
+node_modules/
+docs/

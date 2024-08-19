@@ -1,17 +1,11 @@
 #!/usr/bin/env node
 
-const { program } = require('commander')
-const fs = require('fs')
-const path = require('path')
-const { exec } = require('child_process')
-const prompts = require('prompts')
-const signale = require('signale')
-
-// Custom logger for a cool banner
-function displayBanner() {
-  signale.star('Welcome to BrightSide!')
-  signale.info("Let's create something amazing! 🚀")
-}
+import { program } from 'commander'
+import fs from 'fs'
+import path from 'path'
+import { exec } from 'child_process'
+import prompts from 'prompts'
+import signale from 'signale'
 
 program
   .command('gen-brightbase')
@@ -86,7 +80,7 @@ program
     const cloneCommand = `git clone ${repoUrl} ${targetDir}`
 
     signale.pending(`What's up, ${name === '.' ? 'in the current directory' : name}! Let's create your new Brightside app! 🚀`)
-    exec(cloneCommand, { shell: true }, (error, stdout, stderr) => {
+    exec(cloneCommand, { shell: 'true' }, (error, stdout, stderr) => {
       if (error) {
         signale.error(`Error cloning repository: ${error.message}`)
         return
@@ -117,7 +111,7 @@ program
 
       // Install dependencies and start the dev server
       signale.start('Installing dependencies...')
-      exec(`cd ${targetDir} && npm install`, { shell: true }, (error, stdout, stderr) => {
+      exec(`cd ${targetDir} && npm install`, { shell: 'true' }, (error, stdout, stderr) => {
         if (error) {
           signale.error(`Error installing dependencies: ${error.message}`)
           return
@@ -126,14 +120,14 @@ program
         signale.success('Dependencies installed successfully!')
 
         signale.start('Generating with Supabase...')
-        exec(`cd ${targetDir} && npm run gen`, { shell: true }, (error, stdout, stderr) => {
+        exec(`cd ${targetDir} && npm run gen`, { shell: 'true' }, (error, stdout, stderr) => {
           if (error) {
             signale.error(`Error starting development server: ${error.message}`)
             return
           }
 
           signale.success('Done! Run "npm run dev" to start the development server.')
-          exec(`code ${targetDir}`, { shell: true })
+          exec(`code ${targetDir}`, { shell: 'true' })
         })
       })
     })
@@ -141,15 +135,19 @@ program
 
 program.parse(process.argv)
 
-/* Helper Functions */
+// Custom logger for a cool banner
+function displayBanner(): void {
+  signale.star('Welcome to BrightSide!')
+  signale.info("Let's create something amazing! 🚀")
+}
 
-/**
- * Extracts the table names and their corresponding Row types from the database.types.ts file content.
- * @param {string} data - The content of the database.types.ts file.
- * @returns {Array<{ tableName: string, typeName: string }>} An array of table details with tableName and typeName.
- */
-function extractTableDetails(data) {
-  const tableDetails = []
+interface TableDetails {
+  tableName: string
+  typeName: string
+}
+
+function extractTableDetails(data: string): TableDetails[] {
+  const tableDetails: TableDetails[] = []
   const regex = /(\w+):\s*{\s*Row:\s*{[^}]*}/g
   let match
 
@@ -162,12 +160,7 @@ function extractTableDetails(data) {
   return tableDetails
 }
 
-/**
- * Generates the content for the Tables.ts file.
- * @param {Array<{ tableName: string, typeName: string }>} tableDetails - An array of table details with tableName and typeName.
- * @returns {string} The content to be written to the Tables.ts file.
- */
-function generateTablesContent(tableDetails) {
+function generateTablesContent(tableDetails: TableDetails[]): string {
   const imports = `import { BrightBaseCRUD } from 'brightside-developer'\nimport { BrightTable } from '../types/bright.types'\n\n`
 
   const typeDefinitions = tableDetails
@@ -197,14 +190,11 @@ export type ${typeName}InfiniteReadOptions = [
   return `${imports}\n${tablesObject}\n${typeDefinitions}\nexport default Tables\n`
 }
 
-/**
- * Capitalizes the first letter and converts snake_case or kebab-case to CamelCase.
- * @param {string} str - The input string.
- * @returns {string} The string formatted in CamelCase.
- */
-function capitalizeAndCamelCase(str) {
+function capitalizeAndCamelCase(str: string): string {
   return str
     .split(/_|-/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join('')
 }
+
+// Remaining part of the code stays the same
