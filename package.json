@@ -1,6 +1,6 @@
 {
-  "name": "brightside-cli",
-  "version": "0.0.37",
+  "name": "bsdcli",
+  "version": "0.0.0",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
