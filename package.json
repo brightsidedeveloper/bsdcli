@@ -1,13 +1,13 @@
 {
   "name": "brightside-cli",
-  "version": "0.0.33",
+  "version": "0.0.37",
   "main": "index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js"
   },
   "bin": {
-    "bsd": "index.js"
+    "bsd": "dist/index.js"
   },
   "keywords": [],
   "author": "",
