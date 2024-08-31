@@ -33,7 +33,7 @@ export default async function createBrightSideApp(name: string) {
   const repoUrl = 'https://github.com/brightsidedeveloper/create-brightside-app.git'
   const cloneCommand = `git clone ${repoUrl} ${targetDir}`
 
-  signale.pending(`What's up, ${name === '.' ? 'in the current directory' : name}! Let's create your new Brightside app! 🚀`)
+  signale.pending(`What's up, ${name === '.' ? 'in the current directory' : name}! Let's create your new BrightSide app! 🚀`)
 
   // Execute the clone command
   const { error: cloneError } = await execAsync(cloneCommand)
@@ -84,7 +84,4 @@ export default async function createBrightSideApp(name: string) {
   }
 
   signale.success('Done! Run "npm run dev" to start the development server.')
-
-  // Open the project in VS Code
-  await execAsync(`code ${targetDir}`)
 }
