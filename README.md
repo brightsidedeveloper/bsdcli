@@ -1,1 +1,1 @@
-[https://](https://www.npmjs.com/package/bsdcli)
+[NPM](https://www.npmjs.com/package/bsdcli)
