@@ -3,13 +3,13 @@ import displayBanner from '../utils/displayBanner'
 import fs from 'fs'
 import signale from 'signale'
 
-export default function genBrightbase() {
+export default function genBrightBaseNative() {
   displayBanner()
 
-  const dbTypesFilePath = path.join(process.cwd(), 'src/types', 'database.types.ts')
-  const brightTypesFilePath = path.join(process.cwd(), 'src/types', 'bright.types.ts')
-  const tablesOutputFilePath = path.join(process.cwd(), 'src/api', 'Tables.ts')
-  const rpcOutputFilePath = path.join(process.cwd(), 'src/api', 'Rpc.ts')
+  const dbTypesFilePath = path.join(process.cwd(), 'types', 'database.types.ts')
+  const brightTypesFilePath = path.join(process.cwd(), 'types', 'bright.types.ts')
+  const tablesOutputFilePath = path.join(process.cwd(), 'api', 'Tables.ts')
+  const rpcOutputFilePath = path.join(process.cwd(), 'api', 'Rpc.ts')
 
   // Step 1: Generate bright.types.ts
   generateBrightTypes(brightTypesFilePath)
